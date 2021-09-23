@@ -87,7 +87,7 @@ for rownum in range(64,65):
             port_uplink_syntax = (re.search(r'xgei-\d/\d/\d/', output)).group(0)
             print(port_uplink_syntax)
             # checking a specific setting on a port:
-            for port in range(1, ports_count-4):
+            for port in range(1, ports_count-3):
                 output =  ssh.send_command(f'show running-config-interface {port_client_syntax}{port}', expect_string=r"#")
                 writer_log_file(new_mgmt_ip, f'show running-config-interface {port_client_syntax}{port}', output)
                 print(output)
