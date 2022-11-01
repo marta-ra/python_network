@@ -43,6 +43,11 @@ def writer_ZTE_DCN_Dlink_check_file(*args):
     except:
         return 'File error'
 
+def result(success, search_for):
+    print(success)
+    writer_ZTE_DCN_Dlink_check_file(new_mgmt_ip, search_for, success)
+
+
 path = r'D:\XXX'
 workbook = load_workbook(os.path.join(path, "IP.xlsx"))
 
@@ -267,23 +272,14 @@ for rownum in range(1,max_row_not_empty):
             output =  ssh.send_command('show config current_config', delay_factor = 50, expect_string=r"#")
             # print(output)
             if re.search(multi_filter, output):
-                result = 'OK'
-                print(result)
-                writer_ZTE_DCN_Dlink_check_file(new_mgmt_ip, 'multi_filter', result)
+                result('OK', 'multi_filter')
             else:
-                result = 'ERROR'
-                print(result)
-                writer_ZTE_DCN_Dlink_check_file(new_mgmt_ip, 'multi_filter', result)
+                result('ERROR', 'multi_filter')
             if re.search(find_uplink, output):
-                result = 'OK'
-                print(result)
-                writer_ZTE_DCN_Dlink_check_file(new_mgmt_ip, 'uplinks', result)
+                result('OK', 'uplinks')
             else:
-                result = 'ERROR'
-                print(result)
-                writer_ZTE_DCN_Dlink_check_file(new_mgmt_ip, 'uplinks', result)
+                result('ERROR', 'uplinks')
+
 
         ConnectHandler(**device).disconnect()
         print('\n-------------------------------------------------')
-        
-
