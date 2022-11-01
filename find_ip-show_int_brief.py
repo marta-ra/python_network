@@ -1,4 +1,4 @@
-# скрипт для поиска введенного айпи на оборудовании в выводе команды "show ip interface brief"
+# script to search for the entered ip on the equipment in the output of the "show ip interface brief" command
 from netmiko import ConnectHandler
 from netmiko.ssh_exception import NetMikoTimeoutException
 from netmiko.ssh_exception import AuthenticationException
@@ -10,7 +10,7 @@ import re
 
 device_types = {'mikrotik_routeros': '1', 'cisco_ios': '2', 'hp_procurve': '3'}
 
-# Функция для подключения к оборудованию по ssh:
+# Function for connecting to equipment via ssh:
 def connection(selected_device, host, username, password):
 
     device = {
@@ -21,97 +21,80 @@ def connection(selected_device, host, username, password):
         'port': '22',
         'global_cmd_verify': False,
     }
-    # Проверка на ошибки при вводе данных:
     try:
         connect_to_device = ConnectHandler(**device)
         return connect_to_device
-    except NetMikoTimeoutException: # Проверка на ошибку неправильно введенного ip
+    except NetMikoTimeoutException: # checking for an incorrectly entered ip
         return 'FalseIP'
-    except AuthenticationException: # Проверка на ошибку неправильно введенного логина или пароля
+    except AuthenticationException: # checking for an incorrectly entered log/pass
         return 'FalseLogPass'
 
 
-# Функция для нахождения и возврата типа оборудования(ключа) согласно выбранному номеру(значению). Например, ввели номер 1, значит будет возвращено значение "mikrotik_routeros"
+# Function to find and return the type of equipment (key) according to the selected number (value). For example, enter the number 1, which means the value "mikrotik_routeros" will be returned
 def search_device_type(selected_device, device_types):
-    selected_device_type = list(device_types.keys())[list(device_types.values()).index(selected_device)]
-    return selected_device_type
+    return list(device_types.keys())[list(device_types.values()).index(selected_device)]
 
-# Функция для ввода ip:
 def input_ip():
-    ip = input('Введите ip, который нужно найти: ')
-    return ip
+    return input('Enter the ip to be found: ')
 
-# Функция для проверки ip на корректность введенных данных:
 def check_ip(ip):
-    check = re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip) # Проверяется сколько цифр в октете: должно быть от 1 до 3 цифр
-    return check
+    return re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', ip)
 
-# Функция для поиска ip в переменной output (в ней записан вывод команды "show ip interface brief"):
+# Function to search for ip in the output variable (it contains the output of the "show ip interface brief" command):
 def find_ip(ip):
     check_ip(ip)
-    find_ip = output.find(str(ip)) # Если find не нашел искомое значение, то он вернет "-1", а если найден - вернет некое положительное число, поэтому просто проверяю на равенство с "-1"
+    find_ip = output.find(str(ip)) # If "find" did not find the desired value, then it will return "-1", and if found, it will return some positive number, so I just check for equality with "-1"
     if find_ip != -1:
-        return 'IP адрес найден'
-    else:
-        return 'IP адрес не найден'
+        return 'IP address found'
+    return 'IP address not found'
 
-# Функция для записи шапки в файл:
 def file_header():
     writing = open('find_ip.csv', 'a')
-    writing.write('Дата поиска' + ',' + 'Искомый ip' + ',' + ' Найден ли' + ',' + 'ip оборудования' + ',' + 'Тип оборудования' + '\n')
+    writing.write('Datetime' + ',' + 'desired ip' + ',' + ' is found' + ',' + 'ip device' + ',' + 'equipment type' + '\n')
     writing.close()
-    return None
 
-# Функция для записи данных в файл csv (выбрала csv, так как удобно использовать данный формат для последующей работы с полученными данными):
 def writing_to_file(ip, result_find_ip, selected_device, host):
-    now = datetime.now().strftime("%d-%m-%Y %H:%M") # Для удобства ведения файла записывается время выполнения скрипта
-    if path.exists('find_ip.csv') is False: # Данное условие проверяет существование файла и если он не существует, добавляет шапку файла
+    now = datetime.now().strftime("%d-%m-%Y %H:%M")
+    if path.exists('find_ip.csv') is False:
         file_header()
-    else:
-        pass
     writing = open('find_ip.csv', 'a')
-    writing.write(now + ',' + ip + ',' + result_find_ip + ',' + host + ',' + selected_device + '\n') # запись данных в файл в последовательности согласно шапке
+    writing.write(now + ',' + ip + ',' + result_find_ip + ',' + host + ',' + selected_device + '\n')
     writing.close()
-    return None
 
 
+# LOGIC OF THE SCRIPT:
 
-# ЛОГИКА СКРИПТА:
+# Displaying the equipment type selection in the form of a table (the data for compiling the table is taken from the device_types dictionary, which is located at the beginning of the code)
+print(tabulate(device_types.items(), headers=['Equipment type', 'Choose'], tablefmt="grid"))
 
-# Вывод выбора типа оборудования в виде таблицы (данные для составление таблицы берутся из словаря device_types, который находиться в начале кода)
-print(tabulate(device_types.items(), headers=['Тип оборудования', 'Выбрать'], tablefmt="grid"))
+selected_device = search_device_type(input('Select a device (enter the value from the second column corresponding to the desired device): '), device_types)
 
-# Выбираем тип устройства:
-selected_device = search_device_type(input('Выберите устройство (введите значение из второго столбца, соответствующее нужному устройству): '), device_types)
-
-# Производится подключение к оборудованию и выполнение команды "show ip interface brief", также вывод записывается в переменную output:
-while True: # цикл нужен чтобы давать возможность ввести данные для подключения заново при повлении ошибки
-    # Ввод данных для подключения к оборудованию:
-    host = str(input('ip оборудования: '))
-    username = str(input('Логин: '))
-    password = getpass.getpass('Пароль:')  # в рамках безопасности вводимый пароль не будет отражаться в консоли
-    if connection(selected_device, host, username, password)=='FalseIP': # Проверка на ошибку неправильно введенного ip (исходя из возвращенного значения функцией connection())
-        print('Введены некорректные данные (ip оборудования)')
-    elif connection(selected_device, host, username, password)=='FalseLogPass': # Проверка на ошибку неправильно введенного логина или пароля (исходя из возвращенного значения функцией connection())
-        print('Введены некорректные данные (логин или пароль)')
-    else: # Если connection() вернул не 'FalseIP' или 'FalseLogPass', то подключение есть и можно отправлять команду:
+# Connecting to the equipment and executing the "show ip interface brief" command, the output is also written to the output variable:
+while True: # the loop is needed to give the opportunity to enter data to connect again when an error occurs
+    # Entering data for connecting to equipment:
+    host = str(input('ip device: '))
+    username = str(input('login: '))
+    password = getpass.getpass('password: ')
+    if connection(selected_device, host, username, password)=='FalseIP':
+        print('Incorrect data entered (equipment ip)')
+    elif connection(selected_device, host, username, password)=='FalseLogPass':
+        print('Incorrect data entered (login or password)')
+    else: 
         output = connection(selected_device, host, username, password).send_command('show ip interface brief')
-        # Вывод на экран результата выполнения команды "show ip interface brief":
         print(output)
         break
 
-# Ввод и проверка на корректность ip, который нужно найти в выводе команды "show ip interface brief" (цикл прервется, если функция check_ip() вернет не None:
+# Enter and validate the ip to be found in the output of the "show ip interface brief" command (the loop will break if the check_ip() function does not return None:
 while True:
-    ip = input_ip() # Вводим ip с помощью функции input_ip()
-    if check_ip(ip) is None: # check_ip(ip) - проверка на корректность введенного ip
-        print('Введен некорректный ip, попробуйте еще раз.')
+    ip = input_ip()
+    if check_ip(ip) is None:
+        print('Invalid ip entered, please try again.')
     else:
         break
 
-# Поиск введенного ip в выводе команды "show ip interface brief":
+# Search for the entered ip in the output of the "show ip interface brief" command:
 result_find_ip = find_ip(ip)
-# Вывод на экран результата:
+# Display the result:
 print(result_find_ip)
 
-# Запись результата поиска ip в файл (также туда будут записаны искомый ip, найдне он или нет, тип оборудования и его ip):
 writing_to_file(ip, result_find_ip, selected_device, host)
